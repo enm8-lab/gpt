@@ -1,0 +1,29 @@
+IF NOT _changerangeisvalid THEN
+    _prim_filtered_input := TO_REAL(prim_Input);
+    _sec_filtered_input  := TO_REAL(sec_Input);
+    prim_CurrentValue := 0.0;
+    sec_CurrentValue  := 0.0;
+    _fltInitDone := FALSE;
+ELSE
+  _kFilter := LIMIT(0.01, FB_SETTINGS.FILTER_CONSTANT, 1.0);
+
+	IF NOT Init THEN
+		_fltInitDone := FALSE;
+		_prim_filtered_input := TO_REAL(prim_Input);
+		_sec_filtered_input  := TO_REAL(sec_Input);
+		prim_CurrentValue := 0.0;
+		sec_CurrentValue  := 0.0;
+	ELSE
+		IF NOT _fltInitDone THEN
+			_prim_filtered_input := TO_REAL(prim_Input);
+			_sec_filtered_input  := TO_REAL(sec_Input);
+			_fltInitDone := TRUE;
+		END_IF
+
+		_prim_filtered_input := (_prim_filtered_input * (1.0 - _kFilter) + TO_REAL(prim_Input) * _kFilter);
+		prim_CurrentValue := AICurrentValue(Value := _prim_filtered_input, Unitary_CurVal := _unitary_curval);
+
+		_sec_filtered_input := (_sec_filtered_input * (1.0 - _kFilter) + TO_REAL(sec_Input) * _kFilter);
+		sec_CurrentValue := AICurrentValue(Value := _sec_filtered_input, Unitary_CurVal := _unitary_curval);
+	END_IF
+END_IF

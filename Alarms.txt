@@ -1,0 +1,78 @@
+//------------------Аварии-----------------------------------------
+//Расчет гистерезиса относительно диапазона 
+_value_hyst := (HighRange - LowRange) * (LIMIT(0,FB_SETTINGS.Hyst,100) / 100);
+
+//Срабатывание уставок
+IF LegVal AND NOT _setpointalarmfault THEN
+	//Верхняя аварийная уставка 
+		IF NOT _HH_off THEN
+		_ton_hh(
+			IN := (Value >= HighAlarm) OR (HighAlarmOn AND (Value >= (HighAlarm - _value_hyst))),
+			PT := FB_SETTINGS.TIME_HH
+		);
+		HighAlarmOn := _ton_hh.Q;
+	ELSE
+		_ton_hh(IN := FALSE, PT := FB_SETTINGS.TIME_HH);
+		HighAlarmOn := FALSE;
+	END_IF
+	
+	//Верхняя предупредит. уставка
+	IF NOT _H_off THEN
+		_ton_h(
+			IN := (Value >= HighWarn) OR (HighWarnOn AND (Value >= (HighWarn - _value_hyst))),
+			PT := FB_SETTINGS.TIME_H
+		);
+		HighWarnOn := _ton_h.Q;
+	ELSE
+		_ton_h(IN := FALSE, PT := FB_SETTINGS.TIME_H);
+		HighWarnOn := FALSE;
+	END_IF
+
+	//Нижняя предупредит. уставка
+	IF NOT _L_off THEN
+		_ton_l(
+			IN := (Value <= LowWarn) OR (LowWarnOn AND (Value <= (LowWarn + _value_hyst))),
+			PT := FB_SETTINGS.TIME_L
+		);
+		LowWarnOn := _ton_l.Q;
+	ELSE
+		_ton_l(IN := FALSE, PT := FB_SETTINGS.TIME_L);
+		LowWarnOn := FALSE;
+	END_IF
+		
+	//Нижняя аварийная уставка
+	//Нижняя аварийная уставка
+	IF NOT _LL_off THEN
+		_ton_ll(
+			IN := (Value <= LowAlarm) OR (LowAlarmOn AND (Value <= (LowAlarm + _value_hyst))),
+			PT := FB_SETTINGS.TIME_LL
+		);
+		LowAlarmOn := _ton_ll.Q;
+	ELSE
+		_ton_ll(IN := FALSE, PT := FB_SETTINGS.TIME_LL);
+		LowAlarmOn := FALSE;
+	END_IF
+ELSE
+	_ton_hh(IN := FALSE);
+	_ton_h(IN := FALSE);
+	_ton_l(IN := FALSE);
+	_ton_ll(IN := FALSE);
+	HighAlarmOn	:= FALSE;
+	HighWarnOn 	:= FALSE;
+	LowWarnOn 	:= FALSE;
+	LowAlarmOn 	:= FALSE;
+END_IF
+	
+IF _Deblock THEN //Если есть деблокировка
+	HighAlarmOnAlg 	:= FALSE;
+	HighWarnOnAlg:= FALSE;
+	LowWarnOnAlg := FALSE;
+	LowAlarmOnAlg := FALSE;
+ELSE	
+	HighAlarmOnAlg 	:= HighAlarmOn; // HighAlarmOnAlgoritm присвоить значение сработки Верхней Аварийной уставки (Выход на оборудование)
+	HighWarnOnAlg:= HighWarnOn; // HighWarnOnAlgoritm присвоить значение сработки Верхней Предупредительной уставки (Выход на оборудование)
+	LowWarnOnAlg := LowWarnOn; // LowAlarmOnAlgoritm присвоить значение сработки Нижней Аварийной уставки (Выход на оборудование)
+	LowAlarmOnAlg := LowAlarmOn; // LowWarnOnAlgoritm присвоить значение сработки Нижней Предупредительной уставки (Выход на оборудование)
+END_IF
+
+//--------------------------------------------------------------------------------------------

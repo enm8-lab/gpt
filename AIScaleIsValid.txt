@@ -1,0 +1,10 @@
+{attribute 'hide'}
+FUNCTION AIScaleIsValid : BOOL
+VAR_INPUT
+	HighRange			:REAL;		//Верхнее значение диапазона датчика
+	LowRange			:REAL;		//Нижнее значение диапазона датчика
+END_VAR
+VAR
+END_VAR
+
+AIScaleIsValid := (HighRange > LowRange);

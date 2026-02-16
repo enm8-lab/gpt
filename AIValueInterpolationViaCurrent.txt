@@ -1,0 +1,13 @@
+{attribute 'hide'}
+FUNCTION AIValueInterpolationViaCurrent : REAL
+VAR_INPUT	
+	CurrentValue	: REAL;	// Значение сигнала, ток. ед.
+	HighRange		: REAL;	// Верхнее значение диапазона датчика
+	LowRange		: REAL;	// Нижнее значение диапазона датчика
+	HighCurRange	: REAL; // Верхнее токовое значение в токовых единицах
+	LowCurRange 	: REAL;	// Нижнее токовое значение в токовых единицах
+END_VAR
+VAR
+END_VAR
+
+AIValueInterpolationViaCurrent := TO_REAL(LowRange + (CurrentValue - LowCurRange) * ((HighRange - LowRange) / (HighCurRange - LowCurRange)));

@@ -1,0 +1,92 @@
+//
+// Получение токовых значений в зависимости от выбранного диапазона:
+// - ChangeRange - Диапазон измерений
+// - perc_MinCurValFault - Процент минимального значения тока при неисправности от шкалы (по умолчанию 1%) 
+// - HighCurRange - Верхнее токовое значение в токовых единицах
+// - LowCurRange - Нижнее токовое значение в токовых единицах
+// - HighRawRange - Верхнее токовое значение в кодах АЦП
+// - LowRawRange - Нижнее токовое значение в кодах АЦП
+// - Unitary_CurVal - Единичное токовое значение
+// - MinCurValFault - в зависимости от заданного процента это будет минимальное значение выдаваемого тока с канала AO в случае неисправност
+// 
+// +-----------------+------------+------------+------------+------------+
+// | ChangeRange     |      0     |      1     |      2     |      3     |
+// +=================+============+============+============+============+
+// | Unitary_CurVal  |   2500.0   |   5000.0   |   10000.0  |   5000.0   |
+// +-----------------+------------+------------+------------+------------+
+// | LowCurRange     |   4.0      |   0.0      |   1.0      |   1.0      |
+// +-----------------+------------+------------+------------+------------+
+// | HighCurRange    |   20.0     |   10.0     |   5.0      |   5.0      |
+// +-----------------+------------+------------+------------+------------+
+// | LowRawRange     |   10000    |   0        |   10000    |   5000     |
+// +-----------------+------------+------------+------------+------------+
+// | HighRawRange    |   50000    |   50000    |   50000    |   25000    | 
+// +-----------------+------------+------------+------------+------------+
+// 
+// .. note::
+// 
+// 	Значения LowRawRange и HighRawRange получаются:
+// 	
+// 	.. math::
+// 	LowRawRange = Unitary_CurVal * LowCurRange
+// 	
+// 	.. math::
+// 	HighRawRange = Unitary_CurVal * HighCurRange 
+//
+{attribute 'hide'}
+FUNCTION ASChangeRangeIsValid : BOOL
+VAR_INPUT
+	IS_REDUND : BOOL; // Резервирование блока
+	ChangeRange : BYTE; // 	Диапазон измерений
+	perc_MinCurValFault	: REAL := 5; // Процент минимального значения тока при неисправности от шкалы (по умолчанию 5%)
+END_VAR
+VAR_OUTPUT
+	HighRawRange	: UINT; // Верхнее токовое значение в кодах АЦП
+	LowRawRange 	: UINT;	// Нижнее токовое значение в кодах АЦП
+	HighCurRange	: REAL; // Верхнее токовое значение в токовых единицах
+	LowCurRange 	: REAL;	// Нижнее токовое значение в токовых единицах
+	Unitary_CurVal	: REAL; // Единичное токовое значение
+	MinCurValFault	: REAL; // Минимальное значение тока при неисправности
+END_VAR
+
+CASE ChangeRange OF
+(*4-20*) 0:
+			Unitary_CurVal := 2500.0; 
+			LowCurRange := 4.0; 
+			HighCurRange := 20.0; 
+			ASChangeRangeIsValid := TRUE;
+			MinCurValFault := 4.0;
+(*0-10*) 1: 
+			Unitary_CurVal := 5000.0; 
+			LowCurRange := 0.0; 
+			HighCurRange := 10.0; 
+			ASChangeRangeIsValid := TRUE;
+			MinCurValFault := 0.0;
+(*1- 5*) 2: 
+			Unitary_CurVal := 10000.0; 
+			LowCurRange := 1.0; 
+			HighCurRange := 5.0; 
+			ASChangeRangeIsValid := TRUE;
+			MinCurValFault := 0.0;
+(*1- 5*) 3: 
+			Unitary_CurVal := 5000.0; 
+			LowCurRange := 1.0; 
+			HighCurRange := 5.0; 
+			ASChangeRangeIsValid := TRUE;
+			MinCurValFault := 0.0;
+ELSE
+	Unitary_CurVal := -1.0; 
+	LowCurRange := -1.0; 
+	HighCurRange := -1.0; 
+	ASChangeRangeIsValid := FALSE;
+	MinCurValFault := -1.0;
+END_CASE
+
+IF ASChangeRangeIsValid THEN
+	LowRawRange := TO_UINT(LowCurRange * Unitary_CurVal); 
+	HighRawRange := TO_UINT(HighCurRange * Unitary_CurVal); 
+ELSE
+	LowRawRange := 0; 
+	HighRawRange := 0; 
+	MinCurValFault := -1.0; 
+END_IF

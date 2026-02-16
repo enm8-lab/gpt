@@ -1,0 +1,37 @@
+IF Init THEN
+	StatWord.0 	:= FALSE; 						// (b0) - СВОБОДНО;
+	StatWord.1 	:= _deblock;					// (b1) - Деблокирован;
+	StatWord.2 	:= LoopFault;					// (b2) - Обрыв цепи (итоговое значение);
+	StatWord.3 	:= LegVal;						// (b3) - Достоверность показаний датчика (итоговое значение);
+	StatWord.4 	:= ShortCircuit;				// (b4) - Короткое замыкание (итоговое значение);
+	StatWord.5 	:= ModuleFault;					// (b5) - Неисправность модуля (итоговое значение);
+	StatWord.6 	:= HighAlarmOn;					// (b6) - Сработка сигнализации HH;
+	StatWord.7	:= HighWarnOn;					// (b7) - Сработка сигнализации H;
+	StatWord.8 	:= LowWarnOn;					// (b8) - Сработка сигнализации L;
+	StatWord.9 	:= LowAlarmOn;					// (b9) - Сработка сигнализации LL;
+	StatWord.10	:= NOT _HH_off;					// (b10) - Сигнализация HH включена;
+	StatWord.11	:= NOT _H_off;					// (b11) - Сигнализация H включена;
+	StatWord.12	:= NOT _L_off;					// (b12) - Сигнализация L включена;
+	StatWord.13	:= NOT _LL_off;					// (b13) - Сигнализация LL включена;
+	StatWord.14	:= _imit;						// (b14) - Режим имитации;
+	StatWord.15 := _setpointalarmfault;			// (b15) - Ошибка в уставках;	
+	
+	StatWordRedund.0 := _CH_REG_STATE=CH_REG_STATE.DIRECT_RED;		// (b0) - Режим прямого резервирования;
+	StatWordRedund.1 := _CH_REG_STATE=CH_REG_STATE.REVERSE_RED; 	// (b1) - Режим обратного резервирования;
+	StatWordRedund.2 := _CH_REG_STATE=CH_REG_STATE.FIRST_CHANNEL; 	// (b2) - Только основной канал;
+	StatWordRedund.3 := _CH_REG_STATE=CH_REG_STATE.SECOND_CHANNEL;	// (b3) - Только резервный канал;
+	StatWordRedund.4 := prim_LoopFault; 							// (b4) - Обрыв цепи (основной канал);
+	StatWordRedund.5 := prim_LegVal; 								// (b5) - Достоверность показаний канала (основной канал);
+	StatWordRedund.6 := prim_ShortCircuit;							// (b6) - Короткое замыкание (основной канал);
+	StatWordRedund.7 := prim_ModuleFault; 							// (b7) - Неисправность модуля (основной канал);
+	StatWordRedund.8 := FALSE; 										// (b8) - СВОБОДНО;
+	StatWordRedund.9 := sec_LoopFault; 								// (b9) - Обрыв цепи (резервный канал);
+	StatWordRedund.10 := sec_LegVal; 								// (b10) - Достоверность показаний канала (резервный канал);
+	StatWordRedund.11 := sec_ShortCircuit; 							// (b11) - Короткое замыкание (резервный канал);
+	StatWordRedund.12 := sec_ModuleFault;							// (b12) - Неисправность модуля (резервный канал);		
+	StatWordRedund.13 := FALSE;										// (b13) - СВОБОДНО;
+	StatWordRedund.14 := FALSE;										// (b14) - СВОБОДНО;
+	StatWordRedund.15 := DiscrepancyEval;							// (b15) - Расхождение показаний каналов;
+ELSE
+	StatWord := StatWordRedund := 0;
+END_IF

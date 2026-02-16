@@ -1,0 +1,8 @@
+{attribute 'hide'}
+FUNCTION AICurrentValue : REAL
+VAR_INPUT
+	Value 		: REAL;
+	Unitary_CurVal	: REAL;
+END_VAR
+
+AICurrentValue := TO_REAL(Value / Unitary_CurVal);

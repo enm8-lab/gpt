@@ -1,0 +1,23 @@
+(* Как рассчитывается значение при резервировании:
+0 - REDUND (Резервирование);
+1 - FIRST_CHANNEL (Показания с первого канала);
+2 - SECOND_CHANNEL (Показания со второго канала);
+3 - DISCREPANCY (Расхождение показаний на каналах);
+4 - FIRST_CH_FALSE (Первый канал в ошибке);
+5 - SECOND_CH_FALSE (Второй канал в ошибке);
+-1 - BOTH_FALSE (Оба канала в ошибке);
+*)
+{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+TYPE RED_EVAL :
+(
+	REDUND := 0, // Резервирование
+	FIRST_CHANNEL := 1, // Показания с первого канала
+	SECOND_CHANNEL := 2, // Показания со второго канала
+	DISCREPANCY := 3, 	// Расхождение показаний на каналах	
+	FIRST_CH_FALSE := 4, // Первый канал в ошибке
+	SECOND_CH_FALSE := 5, // Второй канал в ошибке
+	BOTH_FALSE := -1 // Оба канала в ошибке
+);
+END_TYPE

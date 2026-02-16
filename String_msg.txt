@@ -1,0 +1,89 @@
+// Как вычисляются показания 
+IF FB_SETTINGS.IS_REDUND THEN
+	
+	CASE _CH_REG_STATE OF
+		
+		CH_REG_STATE.DIRECT_RED :
+			IF DiscrepancyEval THEN
+				_red_eval := RED_EVAL.DISCREPANCY;
+			ELSIF _prim_sec_LegVal THEN
+				_red_eval := RED_EVAL.REDUND;
+			ELSIF prim_LegVal THEN
+				_red_eval := RED_EVAL.FIRST_CHANNEL;
+			ELSIF sec_LegVal THEN
+				_red_eval := RED_EVAL.SECOND_CHANNEL;
+			ELSE
+				_red_eval := RED_EVAL.BOTH_FALSE;
+			END_IF
+			
+		CH_REG_STATE.REVERSE_RED :
+			IF DiscrepancyEval THEN
+				_red_eval := RED_EVAL.DISCREPANCY;
+			ELSIF _prim_sec_LegVal THEN
+				_red_eval := RED_EVAL.REDUND;
+			ELSIF sec_LegVal THEN
+				_red_eval := RED_EVAL.SECOND_CHANNEL;
+			ELSIF prim_LegVal THEN
+				_red_eval := RED_EVAL.FIRST_CHANNEL;			
+			ELSE
+				_red_eval := RED_EVAL.BOTH_FALSE;
+			END_IF
+			
+		CH_REG_STATE.FIRST_CHANNEL :
+			IF prim_LegVal THEN
+				_red_eval := RED_EVAL.FIRST_CHANNEL;
+			ELSE
+				_red_eval := RED_EVAL.FIRST_CH_FALSE;
+			END_IF
+			
+		CH_REG_STATE.SECOND_CHANNEL :
+			IF sec_LegVal THEN
+				_red_eval := RED_EVAL.SECOND_CHANNEL;
+			ELSE
+				_red_eval := RED_EVAL.SECOND_CH_FALSE;
+			END_IF
+		
+	END_CASE
+	
+ELSE
+	_red_eval := RED_EVAL.FIRST_CHANNEL;
+END_IF
+EVAL_STATE := TO_STRING(_red_eval);
+
+// Режимы работы с каналами
+CHAN_REG_STATE := TO_STRING(_CH_REG_STATE);
+
+// Ошибка настроек ФБ
+_non_init_err := NOT Init;
+_fault_setpoints_err := _setpointsneispravfault;
+_non_scale_err := HighRange = LowRange;
+_scale_err := LowRange > HighRange;
+_alg_setpoints_err := _setpointalarmfault;
+_err_handle_err := (TO_INT(FB_SETTINGS.ERROR_HANDLING) < 0) OR (TO_INT(FB_SETTINGS.ERROR_HANDLING) > 2);
+_chg_rng_err := NOT _changerangeisvalid;
+_no_error := NOT (_non_init_err OR _fault_setpoints_err OR _non_scale_err OR _scale_err OR _alg_setpoints_err OR _err_handle_err OR _chg_rng_err);
+
+FB_ERR := NOT _no_error;
+
+IF _no_error THEN
+	_error := ERRORS.COM_NO_ERROR;
+ELSE
+	IF _non_init_err THEN
+		_error := ERRORS.COM_NON_INIT_ERR;
+	ELSIF _chg_rng_err THEN
+		_error := ERRORS.AS_CHG_RNG_ERR;
+	ELSIF _non_scale_err THEN
+		_error := ERRORS.AS_NON_SCALE_ERR;
+	ELSIF _fault_setpoints_err THEN
+		_error := ERRORS.AI_FAULT_SETPOINTS_ERR;	
+	ELSIF _scale_err THEN
+		_error := ERRORS.AI_SCALE_ERR;
+	ELSIF _alg_setpoints_err THEN
+		_error := ERRORS.AI_ALG_SETPOINTS_ERR;
+	ELSIF _err_handle_err THEN
+		_error := ERRORS.AI_ERR_HANDLE_ERR;
+	
+	END_IF
+END_IF
+
+ERROR_STATE := TO_STRING(_error);

@@ -1,0 +1,107 @@
+// Вычисляем выходное токовое значение
+CASE _CH_REG_STATE OF
+	CH_REG_STATE.DIRECT_RED:
+		CurrentValue := prim_CurrentValue * TO_REAL(prim_LegVal) + sec_CurrentValue * TO_REAL(NOT prim_LegVal AND sec_LegVal);
+	CH_REG_STATE.REVERSE_RED:
+		CurrentValue := sec_CurrentValue * TO_REAL(sec_LegVal) + prim_CurrentValue * TO_REAL(NOT sec_LegVal AND prim_LegVal);
+	CH_REG_STATE.FIRST_CHANNEL:
+		CurrentValue := prim_CurrentValue;
+		sec_CurrentValue := 0.0;
+	CH_REG_STATE.SECOND_CHANNEL:
+		CurrentValue := sec_CurrentValue;
+		prim_CurrentValue := 0.0;
+	ELSE
+		_CH_REG_STATE := CH_REG_STATE.DIRECT_RED;
+END_CASE
+
+_prim_Value := AIValueInterpolationViaCurrent(prim_CurrentValue, HighRange, LowRange, _highcurrange, _lowcurrange);
+_sec_Value := AIValueInterpolationViaCurrent(sec_CurrentValue, HighRange, LowRange, _highcurrange, _lowcurrange);
+_Value := AIValueInterpolationViaCurrent(CurrentValue, HighRange, LowRange, _highcurrange, _lowcurrange);
+
+IF _paramsisvalid THEN
+	IF (NOT _imit) THEN
+			
+		CASE FB_SETTINGS.ERROR_HANDLING OF
+			// Сохранять последнее значение
+			AI_ERR_HAND.KEEP_LAST_VAL : 
+										IF NOT LegVAl THEN
+											Value := _old_value;
+										END_IF
+										
+										IF NOT prim_LegVal THEN
+											prim_Value := _prim_old_value;
+										END_IF
+										
+										IF NOT sec_LegVal THEN
+											sec_Value := _sec_old_value;
+										END_IF
+			// Устанавливать значение низа шкалы
+			AI_ERR_HAND.SET_TO_ZERO : 										
+										IF NOT LegVal THEN
+											Value := LowRange;
+										END_IF
+										
+										IF NOT prim_LegVal THEN
+											prim_Value := LowRange;
+										END_IF
+										
+										IF NOT sec_LegVal THEN
+											sec_Value := LowRange;
+										END_IF										
+			// Продолжать вычисления
+			AI_ERR_HAND.CONTINUE_EVAL : 
+										Value := _Value;
+										_old_value := Value;
+										prim_Value := _prim_Value;
+										_prim_old_value := prim_Value;
+										sec_Value := _sec_Value;
+										_sec_old_value := sec_Value;
+		END_CASE
+		
+		CASE _CH_REG_STATE OF
+		
+			CH_REG_STATE.DIRECT_RED, CH_REG_STATE.REVERSE_RED, CH_REG_STATE.FIRST_CHANNEL, CH_REG_STATE.SECOND_CHANNEL :
+				IF prim_LegVal THEN
+					prim_Value := _prim_Value;
+					_prim_old_value := prim_Value;
+				END_IF
+				
+				IF sec_LegVal THEN
+					sec_Value := _sec_Value;
+					_sec_old_value := sec_Value;
+				END_IF		
+			
+			CH_REG_STATE._UNUSED_1 :			
+				IF prim_LegVal THEN
+					prim_Value := _prim_Value;
+					_prim_old_value := prim_Value;
+				END_IF
+				
+				sec_Value := 0.0;
+				_sec_old_value := sec_Value;
+			
+			CH_REG_STATE._UNUSED_2 :
+				IF sec_LegVal THEN
+					sec_Value := _sec_Value;
+					_sec_old_value := sec_Value;
+				END_IF	
+				
+				prim_Value := 0.0;
+				_prim_old_value := prim_Value;	
+		
+		END_CASE
+		
+		IF LegVal THEN
+			Value := _Value;
+			_old_value := Value;
+		END_IF
+	
+	ELSE	
+		// Режим имтации
+		ImitValue := LIMIT(LowRange, ImitValue, HighRange);
+		Value := ImitValue;
+	END_IF
+ELSE
+	// Если параметры не валидны значение на выходе станет равно половине шкалы 
+	Value := LowRange + (0.5 * (HighRange - LowRange));
+END_IF

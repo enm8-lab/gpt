@@ -1,0 +1,92 @@
+// Неисправности
+// Проверка на валидность выбранного диапазона
+_changerangeisvalid := ASChangeRangeIsValid(
+	IS_REDUND := FB_SETTINGS.IS_REDUND
+	, ChangeRange := FB_SETTINGS.ChangeRange
+	, perc_MinCurValFault := 1
+	, HighRawRange=> _highrawrange
+	, LowRawRange=> _lowrawrange
+	, HighCurRange=> _highcurrange
+	, LowCurRange=> _lowcurrange
+	, Unitary_CurVal=> _unitary_curval
+);
+
+// Обновляем "сырые" токовые значения в текущем цикле (Faults использует их дальше)
+IF _changerangeisvalid THEN
+    _prim_raw_currentvalue := AICurrentValue(Value := prim_Input, Unitary_CurVal := _unitary_curval);
+    _sec_raw_currentvalue  := AICurrentValue(Value := sec_Input,  Unitary_CurVal := _unitary_curval);
+ELSE
+    _prim_raw_currentvalue := 0.0;
+    _sec_raw_currentvalue  := 0.0;
+END_IF
+
+// Проверка на валидность шкалы 
+_scaleisvalid := AIScaleIsValid(HighRange := HighRange, LowRange := LowRange);
+// Проверка на валидность всех параметров
+_paramsisvalid := _changerangeisvalid AND _scaleisvalid;
+
+// Уставка ОЦ больше или равна уставке КЗ и режим работы "Токовая петля"
+_setpointsneispravfault := LoopFaultSetpoint >= ShortCircuitSetpoint AND FB_SETTINGS.ChangeRange = 0;
+// Имитация или Неправильно проставлены уставки для ОЦ и КЗ
+_imit_fault := (_imit OR _setpointsneispravfault);
+
+// Основной канал
+prim_ModuleFault := NOT prim_ModuleNormal; // Неисправность модуля
+prim_LoopFault := (_prim_raw_currentvalue < LoopFaultSetpoint) AND NOT _imit_fault; // ОЦ
+prim_ShortCircuit := (_prim_raw_currentvalue > ShortCircuitSetpoint) AND NOT _imit_fault AND prim_ModuleNormal; // КЗ
+prim_LegVal := NOT (_setpointsneispravfault OR prim_ModuleFault OR prim_LoopFault OR prim_ShortCircuit) AND Init AND _paramsisvalid; // Достоверность показаний
+
+// Резервный канал
+sec_ModuleFault := NOT sec_ModuleNormal; // Неисправность модуля
+sec_LoopFault := (_sec_raw_currentvalue < LoopFaultSetpoint) AND NOT _imit_fault; // ОЦ
+sec_ShortCircuit := (_sec_raw_currentvalue > ShortCircuitSetpoint) AND NOT _imit_fault AND sec_ModuleNormal; // КЗ
+sec_LegVal := NOT (_setpointsneispravfault OR sec_ModuleFault OR sec_LoopFault OR sec_ShortCircuit) AND Init AND _paramsisvalid; // Достоверность показаний
+
+_prim_sec_LegVal := prim_LegVal AND sec_LegVal; // Достоверность показаний с обоих каналов
+
+CASE _CH_REG_STATE OF
+	CH_REG_STATE.FIRST_CHANNEL:
+		LoopFault := prim_LoopFault; // ОЦ
+		ShortCircuit := prim_ShortCircuit;  // КЗ
+		ModuleFault := prim_ModuleFault; // Неисправность модуля
+		// Общие данные (1 из 2-ух)
+		LegVal := _imit OR prim_LegVal; // Достоверность показаний
+		
+		_ton_discrepancy(IN := FALSE, PT := _ton_time_discrepancy, Q => DiscrepancyEval);
+	
+	CH_REG_STATE.SECOND_CHANNEL:
+		LoopFault := sec_LoopFault; // ОЦ
+		ShortCircuit := sec_ShortCircuit;  // КЗ
+		ModuleFault := sec_ModuleFault; // Неисправность модуля
+		// Общие данные (1 из 2-ух)
+		LegVal := _imit OR sec_LegVal; // Достоверность показаний
+		
+		_ton_discrepancy(IN := FALSE, PT := _ton_time_discrepancy, Q => DiscrepancyEval);
+	
+	CH_REG_STATE.DIRECT_RED, CH_REG_STATE.REVERSE_RED:
+		// Общие данные (2 из 2-ух)
+		LoopFault := prim_LoopFault AND sec_LoopFault; // ОЦ
+		ShortCircuit := prim_ShortCircuit AND sec_ShortCircuit;  // КЗ
+		ModuleFault := prim_ModuleFault AND sec_ModuleFault; // Неисправность модуля
+		// Общие данные (1 из 2-ух)
+		LegVal := _imit OR prim_LegVal OR sec_LegVal; // Достоверность показаний
+	
+		// Расхождение сигнала больше, чем заданный процент
+		IF _prim_sec_LegVal THEN
+			_perc_discrepancy_val := (ABS(_prim_raw_currentvalue - _sec_raw_currentvalue) /
+									  MAX(0.0001, MAX(ABS(_prim_raw_currentvalue), ABS(_sec_raw_currentvalue)))); // доля (0..1)
+			_discrepancy := (_perc_discrepancy_val > FB_SETTINGS.PERC_OF_DISCREP);
+		ELSE
+			_perc_discrepancy_val := 0.0;
+			_discrepancy := FALSE;
+		END_IF
+		
+		_ton_discrepancy(IN := _discrepancy, PT := _ton_time_discrepancy, Q => DiscrepancyEval);
+END_CASE
+
+// Ошибка в уставках
+_hh_alarmfault := (NOT _HH_off) AND ((HighAlarm <= HighWarn AND (NOT _H_off)) OR (HighAlarm <= LowWarn AND (NOT _L_off)) OR (HighAlarm <= LowAlarm AND (NOT _LL_off))); // Если вкелючена сигнализация HH и она меньше всех остальных, при условии, что уставки включены
+_h_alarmfault := (NOT _H_off) AND ((HighWarn >= HighAlarm AND (NOT _HH_off)) OR (HighWarn <= LowWarn AND (NOT _L_off)) OR (HighWarn <= LowAlarm AND (NOT _LL_off))); // Если включена сигнализация H и она больше HH и она меньше всех остальных, при условии, что уставки включены
+_l_alarmfault := (NOT _L_off) AND ((LowWarn >= HighAlarm AND (NOT _HH_off)) OR (LowWarn >= HighWarn AND (NOT _H_off)) OR (LowWarn <= LowAlarm AND (NOT _LL_off))); // Если включена сигнализация L и она больше HH и H и она меньше LL остальных, при условии, что уставки включены
+_ll_alarmfault := (NOT _LL_off) AND ((LowAlarm >= HighAlarm AND (NOT _HH_off)) OR (LowAlarm >= HighWarn AND (NOT _H_off)) OR (LowAlarm >= LowWarn AND (NOT _L_off))); // Если включена сигнализация LL и она больше всех остальных, при условии, что уставки включены
+_setpointalarmfault := _hh_alarmfault OR _h_alarmfault OR _l_alarmfault OR _ll_alarmfault;

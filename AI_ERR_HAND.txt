@@ -1,0 +1,14 @@
+(* Что делать при неисиправности:
+0 - KEEP_LAST_VAL (Сохранять последнее значение);
+1 - SET_TO_ZERO (Устанавливать значение низа шкалы);
+2 - CONTINUE_EVAL (Продолжать вычисления);
+*)
+{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE AI_ERR_HAND :
+(
+	KEEP_LAST_VAL := 0, 	// Сохранять последнее значение
+	SET_TO_ZERO := 1, 		// Устанавливать значение низа шкалы
+	CONTINUE_EVAL := 2 		// Продолжать вычисления
+);
+END_TYPE

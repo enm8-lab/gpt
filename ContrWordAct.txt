@@ -1,0 +1,27 @@
+_imit := ImitState := ContrWord.1;						// (b1) - Включить режим имитации;
+_deblock := DeblockState := ContrWord.2;				// (b2) - Деблокировать;
+_HH_off := ContrWord.3 OR FB_SETTINGS.HIGH_DEBLOCK OR hmask;		// (b3) - Отключить сигнализацию HH;
+_H_off := ContrWord.4 OR FB_SETTINGS.HIGH_DEBLOCK OR hmask;	// (b4) - Отключить сигнализацию H;
+_L_off := ContrWord.5 OR FB_SETTINGS.LOW_DEBLOCK OR lmask;		// (b5) - Отключить сигнализацию L;
+_LL_off := ContrWord.6 OR FB_SETTINGS.LOW_DEBLOCK OR lmask;		// (b6) - Отключить сигнализацию LL;
+_direct_red := ContrWord.12;							// (b12) - Включить режим прямого резервирования;
+_reverse_red := ContrWord.13;							// (b13) - Включить режим обратного резервирования;
+_first_channel := ContrWord.14;							// (b14) - Включить в работу только основной канал;
+_second_channel := ContrWord.15;						// (b15) - Включить в работу только резервный канал;
+
+
+IF FB_SETTINGS.IS_REDUND THEN
+    IF _direct_red THEN
+        _CH_REG_STATE := CH_REG_STATE.DIRECT_RED; // Режим прямого резервирования
+    ELSIF _reverse_red THEN
+        _CH_REG_STATE := CH_REG_STATE.REVERSE_RED; // Режим обратного резервирования
+    ELSIF _first_channel THEN
+        _CH_REG_STATE := CH_REG_STATE.FIRST_CHANNEL; // Только основной канал
+    ELSIF _second_channel THEN
+        _CH_REG_STATE := CH_REG_STATE.SECOND_CHANNEL; // Только резервный канал
+    ELSE
+        _CH_REG_STATE := CH_REG_STATE.DIRECT_RED; // ДЕФОЛТ при резервировании, если биты 12..15 не заданы
+    END_IF
+ELSE // Если нет резервирования
+    _CH_REG_STATE := CH_REG_STATE.FIRST_CHANNEL; // Только основной канал
+END_IF
